@@ -179,7 +179,7 @@ TEMPLATE_TEST_CASE( "Testing multivariate expansion worker", "[MultivariateExpan
             expansion.FillCache2(&cache[0], pt, pt(dim-1), DerivativeFlags::None);
 
             eval2 = expansion.Evaluate(&cache[0], coeffs);
-
+            printf("%f, %f, %d, %d\n", inGrad(wrt), (eval2-eval)/fdStep, dim, wrt);
             REQUIRE_THAT(inGrad(wrt), Matchers::WithinAbs((eval2-eval)/fdStep, fdStep*10));
             pt(wrt) -= fdStep;
         }
