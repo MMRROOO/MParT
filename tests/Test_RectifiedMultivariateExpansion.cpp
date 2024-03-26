@@ -16,20 +16,28 @@ TEST_CASE("RectifiedMultivariateExpansion, Unrectified", "[RMVE_NoRect]") {
     unsigned int maxOrder = 2;
     using T = ProbabilistHermite;
     // Create a rectified MVE equivalent to a simple Hermite expansion
-    using OffdiagEval_T = BasisEvaluator<BasisHomogeneity::Homogeneous, T>;
-    using DiagEval_T = BasisEvaluator<BasisHomogeneity::OffdiagHomogeneous, Kokkos::pair<T, T>, Identity>;
+    // using OffdiagEval_T = BasisEvaluator<BasisHomogeneity::Homogeneous, T>;
+    // using DiagEval_T = BasisEvaluator<BasisHomogeneity::OffdiagHomogeneous, Kokkos::pair<T, T>, Identity>;
+    using Eval_T = BasisEvaluator<BasisHomogeneity::Homogeneous, T>;
+
     using RectExpansion_T = RectifiedMultivariateExpansion<MemorySpace, T, T, Identity>;
-    BasisEvaluator<BasisHomogeneity::Homogeneous, T> basis_eval_offdiag;
-    BasisEvaluator<BasisHomogeneity::OffdiagHomogeneous, Kokkos::pair<T, T>, Identity> basis_eval_diag{dim};
+    // BasisEvaluator<BasisHomogeneity::Homogeneous, T> basis_eval_offdiag;
+    // BasisEvaluator<BasisHomogeneity::OffdiagHomogeneous, Kokkos::pair<T, T>, Identity> basis_eval_diag{dim};
+    BasisEvaluator<BasisHomogeneity::Homogeneous, T> basis_eval;
+
     FixedMultiIndexSet<MemorySpace> fmset_offdiag(dim-1, maxOrder);
-    auto limiter = MultiIndexLimiter::NonzeroDiag();
-    FixedMultiIndexSet<MemorySpace> fmset_diag = MultiIndexSet::CreateTotalOrder(dim, maxOrder, limiter).Fix(true);
-    MultivariateExpansionWorker<OffdiagEval_T, MemorySpace> worker_off(fmset_offdiag, basis_eval_offdiag);
-    MultivariateExpansionWorker<DiagEval_T, MemorySpace> worker_diag(fmset_diag, basis_eval_diag);
-    RectExpansion_T rect_mve(worker_off, worker_diag);
+    // auto limiter = MultiIndexLimiter::NonzeroDiag();
+    // FixedMultiIndexSet<MemorySpace> fmset_diag = MultiIndexSet::CreateTotalOrder(dim, maxOrder, limiter).Fix(true);
+    // MultivariateExpansionWorker<OffdiagEval_T, MemorySpace> worker_off(fmset_offdiag, basis_eval_offdiag);
+    // MultivariateExpansionWorker<DiagEval_T, MemorySpace> worker_diag(fmset_diag, basis_eval_diag);
+
+    FixedMultiIndexSet<MemorySpace> fmset(dim-1, maxOrder);
+    MultivariateExpansionWorker<Eval_T, MemorySpace> worker(fmset, basis_eval);
+
+    RectExpansion_T rect_mve(worker);
 
     FixedMultiIndexSet<MemorySpace> fmset_mve {dim, maxOrder};
-    MultivariateExpansion<OffdiagEval_T, MemorySpace> mve(1, fmset_mve, basis_eval_offdiag);
+    MultivariateExpansion<Eval_T, MemorySpace> mve(1, fmset_mve, basis_eval);
     SECTION("Initialization") {
         REQUIRE(rect_mve.numCoeffs == mve.numCoeffs);
         REQUIRE(rect_mve.inputDim == dim);

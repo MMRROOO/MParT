@@ -35,6 +35,10 @@ namespace mpart{
             BasisEvaluator<BasisHomogeneity::Homogeneous, OffdiagEval>,
             MemorySpace
         >;
+        using Worker_T = MultivariateExpansionWorker<
+            BasisEvaluator<BasisHomogeneity::Homogeneous, OffdiagEval>, //for now pass in full eval as OffDiagEval
+            MemorySpace
+        >;
 
 
         RectifiedMultivariateExpansion(OffdiagWorker_T const& worker_off_,
@@ -42,9 +46,19 @@ namespace mpart{
                                     ConditionalMapBase<MemorySpace>(worker_diag_.InputSize(), 1, worker_off_.NumCoeffs() + worker_diag_.NumCoeffs()),
                                     setSize_off(worker_off_.NumCoeffs()),
                                     setSize_diag(worker_diag_.NumCoeffs()),
+                                    setSize(0),
                                     worker_off(worker_off_),
                                     worker_diag(worker_diag_)
+        {throw std::invalid_argument( "calling old constructor" );};
+
+        RectifiedMultivariateExpansion(Worker_T const& worker_):
+                                    ConditionalMapBase<MemorySpace>(worker_.InputSize(), 1, worker_.NumCoeffs()),
+                                    setSize(worker_.NumCoeffs()),
+                                    worker(worker_),
+                                    setSize_off(0),
+                                    setSize_diag(0)
         {};
+
 
         ~RectifiedMultivariateExpansion() = default;
 
@@ -55,13 +69,12 @@ namespace mpart{
             // Take first dim-1 dimensions of pts and evaluate expansion_off
             // Add that to the evaluation of expansion_diag on pts
             StridedVector<double, MemorySpace> output_slice = Kokkos::subview(output, 0, Kokkos::ALL());
-            StridedVector<const double, MemorySpace> coeff_off = CoeffOff();
-            StridedVector<const double, MemorySpace> coeff_diag = CoeffDiag();
+            StridedVector<const double, MemorySpace> coeff = Coeff();
 
             const unsigned int numPts = pts.extent(1);
 
             // Figure out how much memory we'll need in the cache
-            unsigned int cacheSize = std::max(worker_diag.CacheSize(), worker_off.CacheSize());
+            unsigned int cacheSize = worker.CacheSize();
 
             // Define functor if there is a constant worker for all dimensions
             auto functor = KOKKOS_CLASS_LAMBDA (typename Kokkos::TeamPolicy<ExecutionSpace>::member_type team_member) {
@@ -72,22 +85,15 @@ namespace mpart{
 
                     // Create a subview containing only the current point
                     auto pt = Kokkos::subview(pts, Kokkos::ALL(), ptInd);
-                    auto pt_off = Kokkos::subview(pt, std::pair<int,int>(0,pt.size()-1));
 
                     // Get a pointer to the shared memory that Kokkos set up for this team
                     Kokkos::View<double*,MemorySpace> cache(team_member.thread_scratch(1), cacheSize);
 
-                    // Fill in entries in the cache that are independent of x_d.  By passing DerivativeFlags::None, we are telling the expansion that no derivatives with wrt x_1,...x_{d-1} will be needed.
-                    worker_off.FillCache1(cache.data(), pt_off, DerivativeFlags::None);
-                    worker_off.FillCache2(cache.data(), pt_off, pt_off(pt_off.size()-1), DerivativeFlags::None);
-
-                    // Evaluate the expansion
-                    output_slice(ptInd) = worker_off.Evaluate(cache.data(), coeff_off);
 
                     // Fill in entries in the cache that are dependent on x_d.  By passing DerivativeFlags::None, we are telling the expansion that no derivatives with wrt x_1,...x_{d-1} will be needed.
-                    worker_diag.FillCache1(cache.data(), pt, DerivativeFlags::None);
-                    worker_diag.FillCache2(cache.data(), pt, pt(pt.size()-1), DerivativeFlags::None);
-                    output_slice(ptInd) += worker_diag.Evaluate(cache.data(), coeff_diag);
+                    worker.FillCache1(cache.data(), pt, DerivativeFlags::None);
+                    worker.FillCache2(cache.data(), pt, pt(pt.size()-1), DerivativeFlags::None);
+                    output_slice(ptInd) = worker.Evaluate(cache.data(), coeff);
                 }
             };
 
@@ -109,13 +115,12 @@ namespace mpart{
             StridedVector<const double, MemorySpace> sens_slice = Kokkos::subview(sens, 0, Kokkos::ALL());
             unsigned int inDim = pts.extent(0);
 
-            StridedVector<const double, MemorySpace> coeff_off = CoeffOff();
-            StridedVector<const double, MemorySpace> coeff_diag = CoeffDiag();
+            StridedVector<const double, MemorySpace> coeff = Coeff();
 
             const unsigned int numPts = pts.extent(1);
 
             // Figure out how much memory we'll need in the cache
-            unsigned int cacheSize = std::max(worker_diag.CacheSize(), worker_off.CacheSize());
+            unsigned int cacheSize = worker.CacheSize();
 
             // Define functor if there is a constant worker for all dimensions
             auto functor = KOKKOS_CLASS_LAMBDA (typename Kokkos::TeamPolicy<ExecutionSpace>::member_type team_member) {
@@ -126,31 +131,23 @@ namespace mpart{
 
                     // Create a subview containing only the current point
                     auto pt = Kokkos::subview(pts, Kokkos::ALL(), ptInd);
-                    auto pt_off = Kokkos::subview(pts, std::pair<int,int>(0,pt.size()-1), ptInd);
 
                     // Get a pointer to the shared memory that Kokkos set up for this team
                     Kokkos::View<double*,MemorySpace> cache(team_member.thread_scratch(1), cacheSize);
-                    Kokkos::View<double*,MemorySpace> grad_off(team_member.thread_scratch(1), inDim-1);
-                    StridedVector<double, MemorySpace> grad_out = Kokkos::subview(output, Kokkos::ALL(), ptInd);
+                    Kokkos::View<double*,MemorySpace> grad(team_member.thread_scratch(1), inDim-1);
 
-                    // Fill in entries in the cache that are independent of x_d
-                    worker_off.FillCache1(cache.data(), pt_off, DerivativeFlags::Input);
-                    worker_off.FillCache2(cache.data(), pt_off, pt_off(pt_off.size()-1), DerivativeFlags::Input);
-
+ 
                     // Evaluate the expansion
-                    worker_off.InputDerivative(cache.data(), coeff_off, grad_off);
 
                     // Fill in the entries in the cache dependent on x_d
-                    worker_diag.FillCache1(cache.data(), pt, DerivativeFlags::Input);
-                    worker_diag.FillCache2(cache.data(), pt, pt(pt.size()-1), DerivativeFlags::Input);
+                    worker.FillCache1(cache.data(), pt, DerivativeFlags::Input);
+                    worker.FillCache2(cache.data(), pt, pt(pt.size()-1), DerivativeFlags::Input);
 
                     // Evaluate the expansion
-                    worker_diag.InputDerivative(cache.data(), coeff_diag, grad_out);
+                    worker_diag.InputDerivative(cache.data(), coeff, grad);
 
-                    for(unsigned int i=0; i<inDim-1; ++i) {
-                        grad_out(i) = sens_slice(ptInd) * (grad_off(i) + grad_out(i));
-                    }
-                    grad_out(inDim - 1) = sens_slice(ptInd) * grad_out(inDim - 1);
+
+                    grad(inDim - 1) = sens_slice(ptInd) * grad(inDim - 1);
                 }
             };
 
@@ -447,10 +444,14 @@ namespace mpart{
 
         OffdiagWorker_T worker_off;
         DiagWorker_T worker_diag;
+        Worker_T worker;
         const unsigned int setSize_off;
         const unsigned int setSize_diag;
+        const unsigned int setSize;
         StridedVector<const double, MemorySpace> CoeffOff() const { return Kokkos::subview(this->savedCoeffs, std::make_pair(0u, setSize_off)); }
         StridedVector<const double, MemorySpace> CoeffDiag() const { return Kokkos::subview(this->savedCoeffs, std::make_pair(setSize_off, setSize_off+setSize_diag)); }
+        StridedVector<const double, MemorySpace> Coeff() const { return Kokkos::subview(this->savedCoeffs, std::make_pair(0u, setSize)); }
+
     }; // class RectifiedMultivariateExpansion
 }
 
