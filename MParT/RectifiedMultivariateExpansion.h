@@ -215,7 +215,7 @@ namespace mpart{
             unsigned int cacheSize = worker.CacheSize();
 
             // Take logdet of diagonal expansion
-            auto functor = KOKKOS_LAMBDA (typename Kokkos::TeamPolicy<ExecutionSpace>::member_type team_member) {
+            auto functor = KOKKOS_CLASS_LAMBDA (typename Kokkos::TeamPolicy<ExecutionSpace>::member_type team_member) {
 
                 unsigned int ptInd = team_member.league_rank () * team_member.team_size () + team_member.team_rank ();
 
@@ -313,7 +313,7 @@ namespace mpart{
             unsigned int cacheSize = worker.CacheSize();
 
             // Take logdet of diagonal expansion
-            auto functor = KOKKOS_LAMBDA (typename Kokkos::TeamPolicy<ExecutionSpace>::member_type team_member) {
+            auto functor = KOKKOS_CLASS_LAMBDA (typename Kokkos::TeamPolicy<ExecutionSpace>::member_type team_member) {
 
                 unsigned int ptInd = team_member.league_rank () * team_member.team_size () + team_member.team_rank ();
 
@@ -362,7 +362,7 @@ namespace mpart{
             unsigned int cacheSize = worker.CacheSize();
 
             // Take logdet of diagonal expansion
-            auto functor = KOKKOS_LAMBDA (typename Kokkos::TeamPolicy<ExecutionSpace>::member_type team_member) {
+            auto functor = KOKKOS_CLASS_LAMBDA (typename Kokkos::TeamPolicy<ExecutionSpace>::member_type team_member) {
 
                 unsigned int ptInd = team_member.league_rank () * team_member.team_size () + team_member.team_rank ();
 
@@ -413,7 +413,7 @@ namespace mpart{
 
             SingleWorkerEvaluator(double* cache_, PointType pt_, CoeffType coeffs_, Worker_T worker_):
                 cache(cache_), pt(pt_), coeffs(coeffs_), worker(worker_) {}
-            double operator()(double x) {
+            KOKKOS_INLINE_FUNCTION double operator()(double x) {
                 worker.FillCache2(cache, pt, x, DerivativeFlags::None);
                 return worker.Evaluate(cache, coeffs);
             }
