@@ -15,21 +15,12 @@ TEST_CASE("RectifiedMultivariateExpansion, Unrectified", "[RMVE_NoRect]") {
     unsigned int dim = 3;
     unsigned int maxOrder = 2;
     using T = ProbabilistHermite;
-    // Create a rectified MVE equivalent to a simple Hermite expansion
-    // using OffdiagEval_T = BasisEvaluator<BasisHomogeneity::Homogeneous, T>;
-    // using DiagEval_T = BasisEvaluator<BasisHomogeneity::OffdiagHomogeneous, Kokkos::pair<T, T>, Identity>;
+    
     using Eval_T = BasisEvaluator<BasisHomogeneity::OffdiagHomogeneous, Kokkos::pair<T, T>, Identity>;
 
     using RectExpansion_T = RectifiedMultivariateExpansion<MemorySpace, T, T, Identity>;
-    // BasisEvaluator<BasisHomogeneity::Homogeneous, T> basis_eval_offdiag;
-    // BasisEvaluator<BasisHomogeneity::OffdiagHomogeneous, Kokkos::pair<T, T>, Identity> basis_eval_diag{dim};
+    
     Eval_T basis_eval{dim};
-
-    //FixedMultiIndexSet<MemorySpace> fmset_offdiag(dim-1, maxOrder);
-    // auto limiter = MultiIndexLimiter::NonzeroDiag();
-    // FixedMultiIndexSet<MemorySpace> fmset_diag = MultiIndexSet::CreateTotalOrder(dim, maxOrder, limiter).Fix(true);
-    // MultivariateExpansionWorker<OffdiagEval_T, MemorySpace> worker_off(fmset_offdiag, basis_eval_offdiag);
-    // MultivariateExpansionWorker<DiagEval_T, MemorySpace> worker_diag(fmset_diag, basis_eval_diag);
 
     FixedMultiIndexSet<MemorySpace> fmset(dim, maxOrder);
     MultivariateExpansionWorker<Eval_T, MemorySpace> worker(fmset, basis_eval);
