@@ -47,7 +47,7 @@ namespace mpart{
                                     ConditionalMapBase<MemorySpace>(worker_diag_.InputSize(), 1, worker_diag_.NumCoeffs()),
                                     worker(worker_diag_)
         {
-            //throw std::invalid_argument( "calling old constructor" );
+            throw std::invalid_argument( "calling old constructor" );
         };
 
         RectifiedMultivariateExpansion(Worker_T const& worker_):

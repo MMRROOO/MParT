@@ -241,8 +241,7 @@ std::shared_ptr<ConditionalMapBase<MemorySpace>> CreateSigmoidExpansionTemplate(
         ProcAgnosticError<std::invalid_argument>(ss.str().c_str());
     }
     using Sigmoid_T = Sigmoid1d<MemorySpace, SigmoidType, EdgeType>;
-    using DiagBasisEval_T = BasisEvaluator<BasisHomogeneity::OffdiagHomogeneous, Kokkos::pair<OffdiagEval, Sigmoid_T>, Rectifier>;
-    using OffdiagBasisEval_T = BasisEvaluator<BasisHomogeneity::Homogeneous, OffdiagEval>;
+    using Eval_T = BasisEvaluator<BasisHomogeneity::OffdiagHomogeneous, Kokkos::pair<OffdiagEval, Sigmoid_T>, Rectifier>;
     auto sigmoid = CreateSigmoid<MemorySpace, SigmoidType, EdgeType>(inputDim, centers, edgeWidth);
     if(inputDim == 1) {
         unsigned int maxOrder = mset_diag.Size() - 1;
@@ -250,13 +249,11 @@ std::shared_ptr<ConditionalMapBase<MemorySpace>> CreateSigmoidExpansionTemplate(
         output->SetCoeffs(Kokkos::View<double*,MemorySpace>("Component Coefficients", output->numCoeffs));
         return output;
     }
-    DiagBasisEval_T diagBasisEval(inputDim, OffdiagEval(), sigmoid);
+    Eval_T BasisEval(inputDim, OffdiagEval(), sigmoid);
     using RMVE = RectifiedMultivariateExpansion<MemorySpace, OffdiagEval, Sigmoid_T, Rectifier>;
-    unsigned int maxOrder = diagBasisEval.diag_.GetOrder();
-    OffdiagBasisEval_T offdiagBasisEval;
-    MultivariateExpansionWorker<DiagBasisEval_T,MemorySpace> worker_diag(mset_diag, diagBasisEval);
-    MultivariateExpansionWorker<OffdiagBasisEval_T,MemorySpace> worker_offdiag(mset_offdiag, offdiagBasisEval);
-    auto output = std::make_shared<RMVE>(worker_offdiag, worker_diag);
+    unsigned int maxOrder = BasisEval.diag_.GetOrder();
+    MultivariateExpansionWorker<Eval_T,MemorySpace> worker(mset_diag, BasisEval);
+    auto output = std::make_shared<RMVE>(worker);
     output->SetCoeffs(Kokkos::View<double*,MemorySpace>("Component Coefficients", output->numCoeffs));
     return output;
 }
