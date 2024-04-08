@@ -151,7 +151,7 @@ namespace mpart{
 
         template<typename MemorySpace>
         std::shared_ptr<ConditionalMapBase<MemorySpace>> CreateSigmoidComponent(
-            FixedMultiIndexSet<MemorySpace> mset_offdiag, FixedMultiIndexSet<MemorySpace> mset_diag,
+            FixedMultiIndexSet<MemorySpace> mset_diag,
             StridedVector<const double, MemorySpace> centers, MapOptions opts);
 
         template<typename MemorySpace>

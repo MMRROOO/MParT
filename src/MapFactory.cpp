@@ -228,18 +228,17 @@ template<typename MemorySpace, typename OffdiagEval, typename Rectifier, typenam
 using SigmoidBasisEval = BasisEvaluator<BasisHomogeneity::OffdiagHomogeneous, Kokkos::pair<OffdiagEval, Sigmoid1d<MemorySpace, SigmoidType, EdgeType>>>;
 
 template <typename MemorySpace, typename OffdiagEval, typename Rectifier, typename SigmoidType, typename EdgeType>
-std::shared_ptr<ConditionalMapBase<MemorySpace>> CreateSigmoidExpansionTemplate(
-    FixedMultiIndexSet<MemorySpace> mset_offdiag, FixedMultiIndexSet<MemorySpace> mset_diag,
+std::shared_ptr<ConditionalMapBase<MemorySpace>> CreateSigmoidExpansionTemplate(FixedMultiIndexSet<MemorySpace> mset_diag,
     StridedVector<double, MemorySpace> centers, double edgeWidth)
 {
     unsigned int inputDim = mset_diag.Length();
-    if(inputDim != 1 && inputDim != mset_offdiag.Length() + 1) {
-        std::stringstream ss;
-        ss << "Mismatched input dimensions for offdiag and diag multiindex sets\n"
-        << "offdiag: " << mset_offdiag.Length() << "\n"
-        << "diag: " << mset_diag.Length();
-        ProcAgnosticError<std::invalid_argument>(ss.str().c_str());
-    }
+    // if(inputDim != 1 && inputDim != mset_offdiag.Length() + 1) {
+    //     std::stringstream ss;
+    //     ss << "Mismatched input dimensions for offdiag and diag multiindex sets\n"
+    //     << "offdiag: " << mset_offdiag.Length() << "\n"
+    //     << "diag: " << mset_diag.Length();
+    //     ProcAgnosticError<std::invalid_argument>(ss.str().c_str());
+    // }
     using Sigmoid_T = Sigmoid1d<MemorySpace, SigmoidType, EdgeType>;
     using Eval_T = BasisEvaluator<BasisHomogeneity::OffdiagHomogeneous, Kokkos::pair<OffdiagEval, Sigmoid_T>, Rectifier>;
     auto sigmoid = CreateSigmoid<MemorySpace, SigmoidType, EdgeType>(inputDim, centers, edgeWidth);
@@ -267,16 +266,14 @@ std::shared_ptr<ConditionalMapBase<MemorySpace>> CreateSigmoidExpansionTemplate(
         totalOrder = Sigmoid_T::LengthToOrder(centers.size()-2)+3;
     if(inputDim == 1) {
         FixedMultiIndexSet<MemorySpace> mset {1, totalOrder};
-        FixedMultiIndexSet<MemorySpace> mset_offdiag {1,0};
         return CreateSigmoidExpansionTemplate<MemorySpace, OffdiagEval, Rectifier, SigmoidType, EdgeType>(
-            mset_offdiag, mset, centers, edgeWidth);
+            mset, centers, edgeWidth);
     }
     MultiIndexSet mset = MultiIndexSet::CreateTotalOrder(inputDim, totalOrder, MultiIndexLimiter::NonzeroDiag());
     FixedMultiIndexSet<MemorySpace> fmset_diag_d = mset.Fix(true).ToDevice<MemorySpace>();
     FixedMultiIndexSet<Kokkos::HostSpace> fmset_offdiag {inputDim-1, totalOrder};
-    FixedMultiIndexSet<MemorySpace> fmset_offdiag_d = fmset_offdiag.ToDevice<MemorySpace>();
     return CreateSigmoidExpansionTemplate<MemorySpace, OffdiagEval, Rectifier, SigmoidType, EdgeType>(
-        fmset_offdiag_d, fmset_diag_d, centers, edgeWidth);
+        fmset_diag_d, centers, edgeWidth);
 }
 
 template<typename MemorySpace>
@@ -327,16 +324,16 @@ std::shared_ptr<ConditionalMapBase<MemorySpace>> MapFactory::CreateSigmoidCompon
 
 template<typename MemorySpace>
 std::shared_ptr<ConditionalMapBase<MemorySpace>> MapFactory::CreateSigmoidComponent(
-    FixedMultiIndexSet<MemorySpace> mset_offdiag, FixedMultiIndexSet<MemorySpace> mset_diag,
+    FixedMultiIndexSet<MemorySpace> mset_diag,
     StridedVector<const double, MemorySpace> centers, MapOptions opts) {
     HandleSigmoidComponentErrors<MemorySpace>(opts);
     Kokkos::View<double*, MemorySpace> centers_copy("Centers Copy", centers.size());
     Kokkos::deep_copy(centers_copy, centers);
     // Dispatch to the correct sigmoid expansion template
     if(opts.posFuncType == PosFuncTypes::Exp) {
-        return CreateSigmoidExpansionTemplate<MemorySpace, HermiteFunction, Exp, SigmoidTypeSpace::Logistic, SoftPlus>(mset_offdiag, mset_diag, centers_copy, opts.edgeShape);
+        return CreateSigmoidExpansionTemplate<MemorySpace, HermiteFunction, Exp, SigmoidTypeSpace::Logistic, SoftPlus>(mset_diag, centers_copy, opts.edgeShape);
     } else if(opts.posFuncType == PosFuncTypes::SoftPlus) {
-        return CreateSigmoidExpansionTemplate<MemorySpace, HermiteFunction, SoftPlus, SigmoidTypeSpace::Logistic, SoftPlus>(mset_offdiag, mset_diag, centers_copy, opts.edgeShape);
+        return CreateSigmoidExpansionTemplate<MemorySpace, HermiteFunction, SoftPlus, SigmoidTypeSpace::Logistic, SoftPlus>(mset_diag, centers_copy, opts.edgeShape);
     }
     else {
         return nullptr;
@@ -368,7 +365,7 @@ template std::shared_ptr<ParameterizedFunctionBase<Kokkos::HostSpace>> mpart::Ma
 template std::shared_ptr<ConditionalMapBase<Kokkos::HostSpace>> mpart::MapFactory::CreateTriangular<Kokkos::HostSpace>(unsigned int, unsigned int, unsigned int, MapOptions);
 template std::shared_ptr<ConditionalMapBase<Kokkos::HostSpace>> mpart::MapFactory::CreateSingleEntryMap(unsigned int, unsigned int, std::shared_ptr<ConditionalMapBase<Kokkos::HostSpace>> const&);
 template std::shared_ptr<ConditionalMapBase<Kokkos::HostSpace>> mpart::MapFactory::CreateSigmoidComponent<Kokkos::HostSpace>(unsigned int, unsigned int, StridedVector<const double, Kokkos::HostSpace>, MapOptions);
-template std::shared_ptr<ConditionalMapBase<Kokkos::HostSpace>> mpart::MapFactory::CreateSigmoidComponent<Kokkos::HostSpace>(FixedMultiIndexSet<Kokkos::HostSpace>, FixedMultiIndexSet<Kokkos::HostSpace>, StridedVector<const double, Kokkos::HostSpace>, MapOptions);
+template std::shared_ptr<ConditionalMapBase<Kokkos::HostSpace>> mpart::MapFactory::CreateSigmoidComponent<Kokkos::HostSpace>(FixedMultiIndexSet<Kokkos::HostSpace>, StridedVector<const double, Kokkos::HostSpace>, MapOptions);
 template std::shared_ptr<ConditionalMapBase<Kokkos::HostSpace>> mpart::MapFactory::CreateSigmoidTriangular<Kokkos::HostSpace>(unsigned int, unsigned int, unsigned int, std::vector<StridedVector<const double, Kokkos::HostSpace>> const&, MapOptions);
 #if defined(MPART_ENABLE_GPU)
     template std::shared_ptr<ConditionalMapBase<DeviceSpace>> mpart::MapFactory::CreateComponent<DeviceSpace>(FixedMultiIndexSet<DeviceSpace> const&, MapOptions);
@@ -376,6 +373,6 @@ template std::shared_ptr<ConditionalMapBase<Kokkos::HostSpace>> mpart::MapFactor
     template std::shared_ptr<ConditionalMapBase<DeviceSpace>> mpart::MapFactory::CreateTriangular<DeviceSpace>(unsigned int, unsigned int, unsigned int, MapOptions);
     template std::shared_ptr<ConditionalMapBase<DeviceSpace>> mpart::MapFactory::CreateSingleEntryMap(unsigned int, unsigned int, std::shared_ptr<ConditionalMapBase<DeviceSpace>> const&);
     template std::shared_ptr<ConditionalMapBase<DeviceSpace>> mpart::MapFactory::CreateSigmoidComponent<DeviceSpace>(unsigned int, unsigned int, StridedVector<const double, DeviceSpace>, MapOptions);
-    template std::shared_ptr<ConditionalMapBase<DeviceSpace>> mpart::MapFactory::CreateSigmoidComponent<DeviceSpace>(FixedMultiIndexSet<DeviceSpace>, FixedMultiIndexSet<DeviceSpace>, StridedVector<const double, DeviceSpace>, MapOptions);
+    template std::shared_ptr<ConditionalMapBase<DeviceSpace>> mpart::MapFactory::CreateSigmoidComponent<DeviceSpace>(FixedMultiIndexSet<DeviceSpace>, StridedVector<const double, DeviceSpace>, MapOptions);
     template std::shared_ptr<ConditionalMapBase<DeviceSpace>> mpart::MapFactory::CreateSigmoidTriangular<DeviceSpace>(unsigned int, unsigned int, unsigned int, std::vector<StridedVector<const double, DeviceSpace>> const&, MapOptions);
 #endif
