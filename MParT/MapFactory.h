@@ -156,11 +156,11 @@ namespace mpart{
 
         template<typename MemorySpace>
         std::shared_ptr<ConditionalMapBase<MemorySpace>> CreateSigmoidComponent(
-            FixedMultiIndexSet<MemorySpace> mset_offdiag, FixedMultiIndexSet<MemorySpace> mset_diag,
+            FixedMultiIndexSet<MemorySpace> mset_diag,
             Eigen::Ref<const Eigen::RowVectorXd> centers, MapOptions opts) {
             StridedVector<const double, Kokkos::HostSpace> centersVec = ConstVecToKokkos<double, Kokkos::HostSpace>(centers);
             Kokkos::View<const double*, MemorySpace> centers_d = Kokkos::create_mirror_view_and_copy(MemorySpace(), centersVec);
-            return CreateSigmoidComponent<MemorySpace>(mset_offdiag, mset_diag, centers_d, opts);
+            return CreateSigmoidComponent<MemorySpace>(mset_diag, centers_d, opts);
         }
 
         template<typename MemorySpace>

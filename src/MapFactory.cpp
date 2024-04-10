@@ -271,7 +271,6 @@ std::shared_ptr<ConditionalMapBase<MemorySpace>> CreateSigmoidExpansionTemplate(
     }
     MultiIndexSet mset = MultiIndexSet::CreateTotalOrder(inputDim, totalOrder, MultiIndexLimiter::NonzeroDiag());
     FixedMultiIndexSet<MemorySpace> fmset_diag_d = mset.Fix(true).ToDevice<MemorySpace>();
-    FixedMultiIndexSet<Kokkos::HostSpace> fmset_offdiag {inputDim-1, totalOrder};
     return CreateSigmoidExpansionTemplate<MemorySpace, OffdiagEval, Rectifier, SigmoidType, EdgeType>(
         fmset_diag_d, centers, edgeWidth);
 }
