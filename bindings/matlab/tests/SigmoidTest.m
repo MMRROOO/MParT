@@ -25,7 +25,6 @@ classdef SigmoidTest < matlab.unittest.TestCase
             opts = MapOptions;
             opts.basisType = BasisTypes.HermiteFunctions;
             mset = FixedMultiIndexSet(input_dim, max_order);
-            disp(mset)
             comp = CreateSigmoidComponent(mset, centers, opts);
             expected_coeffs = mset.Size();
             testCase.verifyEqual( comp.numCoeffs, uint32(expected_coeffs) );

@@ -71,7 +71,6 @@ methods
           input_str=[input_str,input_o];
         end
         input_str=[input_str,')'];
-        display(input_str);
         this.id_ = eval(input_str);
       else
         error("Wrong input arguments");
