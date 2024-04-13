@@ -32,8 +32,7 @@ namespace mpart{
                 Kokkos::pair<OffdiagEval, DiagEval>, //OffDiag and DiagEval are the same
             Rectifier>, MemorySpace
         >;
-
-
+        
         RectifiedMultivariateExpansion(Worker_T const& worker_):
                                     ConditionalMapBase<MemorySpace>(worker_.InputSize(), 1, worker_.NumCoeffs()),
                                     worker(worker_)
