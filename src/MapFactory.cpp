@@ -232,13 +232,6 @@ std::shared_ptr<ConditionalMapBase<MemorySpace>> CreateSigmoidExpansionTemplate(
     StridedVector<double, MemorySpace> centers, double edgeWidth)
 {
     unsigned int inputDim = mset_diag.Length();
-    // if(inputDim != 1 && inputDim != mset_offdiag.Length() + 1) {
-    //     std::stringstream ss;
-    //     ss << "Mismatched input dimensions for offdiag and diag multiindex sets\n"
-    //     << "offdiag: " << mset_offdiag.Length() << "\n"
-    //     << "diag: " << mset_diag.Length();
-    //     ProcAgnosticError<std::invalid_argument>(ss.str().c_str());
-    // }
     using Sigmoid_T = Sigmoid1d<MemorySpace, SigmoidType, EdgeType>;
     using Eval_T = BasisEvaluator<BasisHomogeneity::OffdiagHomogeneous, Kokkos::pair<OffdiagEval, Sigmoid_T>, Rectifier>;
     auto sigmoid = CreateSigmoid<MemorySpace, SigmoidType, EdgeType>(inputDim, centers, edgeWidth);
