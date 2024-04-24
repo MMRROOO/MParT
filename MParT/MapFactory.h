@@ -145,8 +145,8 @@ namespace mpart{
             unsigned int inputDim, unsigned int totalOrder, Eigen::Ref<const Eigen::RowVectorXd> centers,
             MapOptions opts) {
             StridedVector<const double, Kokkos::HostSpace> centersVec = ConstVecToKokkos<double, Kokkos::HostSpace>(centers);
-            Kokkos::View<const double*, MemorySpace> centers = Kokkos::create_mirror_view_and_copy(MemorySpace(), centersVec);
-            return CreateSigmoidComponent<MemorySpace>(inputDim, totalOrder, centers, opts);
+            Kokkos::View<const double*, MemorySpace> centers_copy = Kokkos::create_mirror_view_and_copy(MemorySpace(), centersVec);
+            return CreateSigmoidComponent<MemorySpace>(inputDim, totalOrder, centers_copy, opts);
         }
 
         template<typename MemorySpace>
@@ -159,8 +159,8 @@ namespace mpart{
             FixedMultiIndexSet<MemorySpace> mset,
             Eigen::Ref<const Eigen::RowVectorXd> centers, MapOptions opts) {
             StridedVector<const double, Kokkos::HostSpace> centersVec = ConstVecToKokkos<double, Kokkos::HostSpace>(centers);
-            Kokkos::View<const double*, MemorySpace> centers = Kokkos::create_mirror_view_and_copy(MemorySpace(), centersVec);
-            return CreateSigmoidComponent<MemorySpace>(mset, centers, opts);
+            Kokkos::View<const double*, MemorySpace> centers_copy = Kokkos::create_mirror_view_and_copy(MemorySpace(), centersVec);
+            return CreateSigmoidComponent<MemorySpace>(mset, centers_copy, opts);
         }
 
         template<typename MemorySpace>
